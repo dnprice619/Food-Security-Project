@@ -68,9 +68,21 @@ twoway (line logcpi year)(line logfoodcpi year), title(World Consumer Price Inde
 	
 restore
 
-kountry country, from(other) marker 
+*rename country codes
+kountry countryname, from(other) marker 
 
-rename country countryname 
+*check what worked with renaming
+tab MARKER 
+
+tab countryname if MARKER==0 
+
+*drop names that are not applicable to country level etc. 
+drop if MARKER==0 
+
+drop countryname 
+
+rename NAMES_STD countryname 
+
 save consumerpriceslong.dta, replace
 
 *see if you can capture the lost countries here
@@ -89,6 +101,17 @@ set more off
 
 use agwbdata.dta
 drop if year<2000
+
+kountry countryname, from(other) marker 
+
+tab MARKER
+tab countryname if MARKER==0 
+drop if MARKER==0 
+
+drop countryname 
+drop MARKER
+
+rename NAMES_STD countryname 
 
 merge 1:m countryname year using consumerpriceslong.dta 
 
