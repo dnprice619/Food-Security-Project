@@ -50,6 +50,10 @@ gen logfoodcpi = ln(foodcpi)
 save consumerpriceslong.dta, replace 
 restore
 
+****************************************************************************************
+****************************************************************************************
+****************************************************************************************
+
 clear
 
 set more off 
@@ -70,6 +74,15 @@ rename country countryname
 save consumerpriceslong.dta, replace
 
 *see if you can capture the lost countries here
+
+********************************************
+******************************************************************
+******************************************************************
+
+
+*5.30.17 
+*real analysis starts here 
+*Consider revising and fixing naming conventions to add observations 
 
 clear
 set more off
@@ -126,3 +139,4 @@ preserve
 collapse logcereal logfertilizer logfoodcpi, by(year)
 twoway (line logcereal year, yaxis(2))(line logfertilizer year)(line logfoodcpi year) 
 restore
+
