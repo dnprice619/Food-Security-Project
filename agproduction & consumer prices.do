@@ -237,5 +237,33 @@ gen logfertusearea = ln(fertilizerhect)
 
 kdensity logfertusearea, normal 
 
+*graph 
+preserve
+collapse logfertusearea logfoodcpi, by(countryname)
+twoway (scatter logfertusearea logfoodcpi, mlabel(countryname))(lfit logfertusearea logfoodcpi)
+restore
+
+preserve 
+collapse logfertusearea logfoodcpi, by(year) 
+twoway (line logfertusearea year)(line logfoodcpi year) 
+restore
+
+*regression check 
+reg logfoodcpi logfertusearea i.regioncoded, r
+
+reg logfoodcpi logfertusearea i.year, r
+
+areg logfoodcpi c.logfertusearea##i.regioncoded, absorb(countryname) cluster(countryname) 
+
+*code countrynames 
+encode countryname, gen(countrycoded) 
+
+reg logfoodcpi logfertusearea c.year##i.countrycoded i.year, cluster(countryname) 
+
+cmogram logfoodcpi logfertusearea, scatter lowess
+
+*between country effect and than within effect 
+
+
 
 
