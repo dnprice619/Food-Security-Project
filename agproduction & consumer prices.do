@@ -163,3 +163,79 @@ collapse logcereal logfertilizer logfoodcpi, by(year)
 twoway (line logcereal year, yaxis(2))(line logfertilizer year)(line logfoodcpi year) 
 restore
 
+*precipitation and food prices? 
+rename ag_lnd_prcp_mm avgprecip 
+
+kdensity avgprecip, normal 
+
+gen logprecip = ln(avgprecip)
+
+kdensity logprecip, normal 
+
+preserve
+collapse logfoodcpi avgprecip, by(year) 
+twoway scatter logfoodcpi avgprecip 
+restore
+
+*Precipitation doesnt have enough observations to really use in this analysis 
+*what other variables would be the righ choice? 
+
+*irrigated land 
+codebook ag_lnd_irig_a~s 
+
+rename ag_lnd_irig_a~s landirrigated 
+
+kdensity landirrigated, normal 
+
+gen logirrigated = ln(landirrigated) 
+
+preserve
+collapse logfoodcpi logirrigated, by(countryname) 
+
+twoway scatter logfoodcpi logirrigated
+restore
+
+*arable land per person 
+rename ag_lnd_arbl_h~c arlandprperson
+
+kdensity arlandprperson, normal 
+
+gen logarlandperson = ln(arlandprperson) 
+
+preserve
+collapse logfoodcpi logarlandperson, by(countryname) 
+twoway (lfit logfoodcpi logarlandperson)(scatter logfoodcpi logarlandperson, mlabel(countryname))
+restore
+
+preserve 
+collapse logfoodcpi logarlandperson, by(year) 
+twoway (line logfoodcpi year)(line logarlandperson year) 
+restore
+
+*log food cpi by region....price changes and regions 
+tab regioncode 
+
+encode regioncode, gen(regioncoded) 
+
+*simplify regions 
+preserve
+collapse logfoodcpi, by(regioncoded year) 
+twoway (line logfoodcpi year if regioncoded==1)(line logfoodcpi year if regioncoded==2) ///
+	(line logfoodcpi year if regioncoded==3)(line logfoodcpi year if regioncoded==4) ///
+	(line logfoodcpi year if regioncoded==5)(line logfoodcpi year if regioncoded==6) ///
+	(line logfoodcpi year if regioncoded==7), title(Food CPI Trends) subtitle(By Region) ///
+	legend(order(1 "East Asia & Pacific" 2 "Europe & Central Asia" 3 "Latin America" 4 "Middle East & North Africa" 5 "North America" 6 "South Asia" 7 "Sub-Saharan Africa")size(small)) ///
+	xtitle(Year) ytitle(Log CPI) xlabel(2000(2)2014) 
+restore
+
+*fertilizer intensity by land area
+rename ag_con_fert_zs fertilizerhect
+
+kdensity fertilizerhect, normal 
+
+gen logfertusearea = ln(fertilizerhect) 
+
+kdensity logfertusearea, normal 
+
+
+
