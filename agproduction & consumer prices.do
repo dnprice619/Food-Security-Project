@@ -264,6 +264,34 @@ cmogram logfoodcpi logfertusearea, scatter lowess
 
 *between country effect and than within effect 
 
+*agg value added per worker
+rename ea_prd_agri_kd aggvalworker 
 
+kdensity aggvalworker, normal 
 
+gen logagvalworker = ln(aggvalworker) 
+
+kdensity logagvalworker, normal 
+
+preserve
+collapse logfoodcpi logagvalworker, by(countryname) 
+twoway scatter logfoodcpi logagvalworker, mlabel(countryname) 
+restore
+
+*collinearity of fertilizer and added value per worker 
+preserve 
+collapse logfertusearea logagvalworker, by(countryname) 
+twoway (lfitci logfertusearea logagvalworker)(scatter logfertusearea logagvalworker, mlabel(countryname)) 
+restore
+
+preserve
+collapse logfertusearea logagvalworker logfoodcpi, by(year) 
+twoway (line logfertusearea year)(line logagvalworker year, yaxis(2))(line logfoodcpi year), ///
+	legend(order(1 "Fertilizer Use per Hectre" 2 "Agricultural Added Value per Worker" 3 "Food CPI")size(small)) ///
+	ytitle(Log Value) ytitle(Log Value Ag., axis(2))
+restore
+
+areg logfoodcpi logagvalworker logfertusearea i.year, absorb(countrycoded) cluster(countrycoded) 
+
+cmogram logfoodcpi logagvalworker, scatter lowess 
 
