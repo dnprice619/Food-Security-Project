@@ -295,3 +295,36 @@ areg logfoodcpi logagvalworker logfertusearea i.year, absorb(countrycoded) clust
 
 cmogram logfoodcpi logagvalworker, scatter lowess 
 
+
+*perecent total emp. in ag 
+rename sl_agr_empl_zs percentinag 
+
+gen logperinag = ln(percentinag) 
+
+reg logfoodcpi logperinag i.countryname i.year, r
+
+gen y2008 = 0 
+
+replace y2008=1 if year==2008
+
+cmogram logfoodcpi year, scatter lowess 
+
+preserve
+collapse logfoodcpi, by(year) 
+twoway line logfoodcpi year
+restore
+
+reg logfoodcpi y2008 i.countrycoded i.year, r
+
+gen D_logfoodcpi = logfoodcpi[_n-1] - logfoodcpi if countryname[_n-1] == countryname 
+
+
+
+
+
+
+
+
+
+
+
