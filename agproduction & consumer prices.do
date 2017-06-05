@@ -301,8 +301,6 @@ rename sl_agr_empl_zs percentinag
 
 gen logperinag = ln(percentinag) 
 
-reg logfoodcpi logperinag i.countryname i.year, r
-
 gen y2008 = 0 
 
 replace y2008=1 if year==2008
@@ -316,15 +314,21 @@ restore
 
 reg logfoodcpi y2008 i.countrycoded i.year, r
 
-gen D_logfoodcpi = logfoodcpi[_n-1] - logfoodcpi if countryname[_n-1] == countryname 
+*create first difference variable as potential Dep. variable in analysis 
+*this will deal with trends....or could de-trend variable as well 
 
+gen D_foodcpi = foodcpi - foodcpi[_n-1] if countryname == countryname[_n-1]
 
+preserve
+collapse D_foodcpi, by(year) 
+twoway line D_foodcpi year
+restore
 
+sum D_foodcpi, d
 
+kdensity D_foodcpi, normal 
 
+*Independent variables?? 
 
-
-
-
-
+areg logfoodcpi logprecip logirrigated logarlandperson i.year, absorb(countrycoded) r
 
