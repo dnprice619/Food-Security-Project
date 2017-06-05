@@ -312,23 +312,73 @@ collapse logfoodcpi, by(year)
 twoway line logfoodcpi year
 restore
 
-reg logfoodcpi y2008 i.countrycoded i.year, r
+*check differences between log and not log verisions of CPI 
+*clearly a major difference between the two 
 
-*create first difference variable as potential Dep. variable in analysis 
-*this will deal with trends....or could de-trend variable as well 
-
-gen D_foodcpi = foodcpi - foodcpi[_n-1] if countryname == countryname[_n-1]
 
 preserve
-collapse D_foodcpi, by(year) 
-twoway line D_foodcpi year
+collapse logfoodcpi foodcpi, by(year) 
+twoway (line logfoodcpi year)(line foodcpi year, yaxis(2))
 restore
 
-sum D_foodcpi, d
+twoway scatter logfoodcpi logcpi, mlabel(countryname) 
 
-kdensity D_foodcpi, normal 
+areg logfoodcpi i.y2008##i.regioncoded i.year, absorb(countrycoded) r
 
-*Independent variables?? 
+********************************************************************************
+********************************************************************************
+********************************************************************************
 
-areg logfoodcpi logprecip logirrigated logarlandperson i.year, absorb(countrycoded) r
+********************************************************************************
+********************************************************************************
+*import state fragility index data 
+duplicates tag countryname year, gen(duptag) 
+tab duptag
+drop if duptag==1 
+
+drop duptag 
+save logfoodcpidataset.dta, replace 
+
+clear
+
+set more off 
+
+import delimited using "SFIv2015-2.csv"
+
+*check naming conventions for merge
+kountry country, from(other) mark 
+
+tab MARKER 
+
+drop if MARKER==0 
+
+rename NAMES_STD countryname 
+drop country
+*drop years that i dont need 
+drop if year<2000
+drop region 
+
+
+
+merge 1:1 countryname year using logfoodcpidataset.dta 
+
+keep if _merge==3
+
+save pricefragility.dta, replace
+
+
+***************************************************************************
+************************************************************
+reg sfi logfoodcpi, r
+
+preserve
+collapse sfi logfoodcpi, by(countryname) 
+twoway scatter sfi logfoodcpi, yaxis(2) mlabel(countryname) 
+restore
+
+areg sfi c.logfoodcpi##i.regioncoded i.year, absorb(countrycoded) r 
+
+*think about coding the SFI variable to be in more clear definitions... or multi tiered 
+
+*check out other variables in dataset 
 
