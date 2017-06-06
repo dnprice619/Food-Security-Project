@@ -410,7 +410,8 @@ restore
 *cross section
 preserve 
 collapse sfi logfoodcpi, by(countryname) 
-twoway (lfitci sfi logfoodcpi)(scatter sfi logfoodcpi, mlabel(countryname))
+twoway (lfitci sfi logfoodcpi)(scatter sfi logfoodcpi, mlabel(countryname)), ///
+	ytitle(SFI Score) xtitle(Log Food CPI) 
 restore
 
 
