@@ -382,3 +382,38 @@ areg sfi c.logfoodcpi##i.regioncoded i.year, absorb(countrycoded) r
 
 *check out other variables in dataset 
 
+clear 
+
+cd "/Users/davidprice/Documents/q3 2017/Food Security/data for finaflf project"
+
+set more off 
+
+use pricefragility.dta 
+
+preserve
+collapse sfi, by(year regioncoded)
+tab regioncoded
+twoway (line sfi year if regioncoded==1)(line sfi year if regioncoded==2) ///
+	(line sfi year if regioncoded==3)(line sfi year if regioncoded==4) ///
+	(line sfi year if regioncoded==5)(line sfi year if regioncoded==6) ///
+	(line sfi year if regioncoded==7)
+
+restore
+
+*time series 
+preserve 
+collapse sfi logfoodcpi, by(year)
+twoway (line sfi year)(line logfoodcpi year, yaxis(2)), ytitle(Log CPI) ytitle(State Fragility Index, axis(2)) ///
+	title(Trend of State Fragility Index & Food CPI) subtitle("2000 to 2015") xtitle(Year) xlabel(2000(2)2015)
+restore
+
+*cross section
+preserve 
+collapse sfi logfoodcpi, by(countryname) 
+twoway (lfitci sfi logfoodcpi)(scatter sfi logfoodcpi, mlabel(countryname))
+restore
+
+
+
+
+
