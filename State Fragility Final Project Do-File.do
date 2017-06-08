@@ -162,6 +162,28 @@ twoway (line logfoodcpi year if regioncoded==4)(line logfoodcpi year if regionco
 	xline(2008) note(x-line at 2008) 
 restore
 
+*egypt? 
+*39 
+gen egypt = 0 
+replace egypt = 1 if countrycoded==1 
+
+preserve 
+collapse sfi logfoodcpi logcereal, by(egypt year) 
+twoway (line sfi year if egypt==1)(line logcereal year if egypt==1, yaxis(2))
+twoway (line sfi year if egypt==1)(line logfoodcpi year if egypt==1, yaxis(2))
+restore
+
+*yemen
+*139 
+gen yemen=0 
+replace yemen=1 if countrycoded==139
+
+preserve
+collapse sfi logfoodcpi logcereal, by(regioncoded yemen year)
+twoway (line logfoodcpi year if  yemen==1)(line sfi year if yemen==1, yaxis(2))
+twoway (line sfi year if yemen==1)(line logcereal year if yemen==1, yaxis(2))
+restore
+
 *generate dummy if tehy are in the region or not 
 gen middle_east = 0 
 replace middle_east =1 if regioncoded==4 
@@ -173,6 +195,35 @@ reg sfi c.logfoodcpi##i.S_Africa c.logfoodcpi##i.middle_east i.year, r
 
 reg sfi i.regioncoded##c.logfoodcpi i.year, r
 
+
+*going to look at middle eastern countries in conflict
+*egypt syria iraq yemen and middle east/NA as a whole 
+preserve
+collapse sfi logfoodcpi food_pro_index, by(egypt syria iraq yemen year) 
+twoway (line sfi year if egypt==1)(line sfi year if iraq==1)(line sfi year if yemen==1) ///
+	(line sfi year if syria==1), legend(order(1 "Egypt" 2 "Iraq" 3 "Yemen" 4 "Syria")) ///
+	title(State Fragility Index) subtitle(Select Countries) ytitle(Index) xtitle(Year) ///
+	xlabel(2000(2)2014) 
+	
+twoway (line food_pro_index year if egypt==1)(line food_pro_index year if iraq==1)(line food_pro_index year if yemen==1) ///
+	(line food_pro_index year if syria==1), legend(order(1 "Egypt" 2 "Iraq" 3 "Yemen" 4 "Syria")) ///
+	title(Food Production Index) subtitle(Select Countries) ytitle(Index) xtitle(Year) ///
+	xlabel(2000(2)2014) 
+	
+	
+twoway (line logfoodcpi year if egypt==1)(line logfoodcpi year if iraq==1)(line logfoodcpi year if yemen==1) ///
+	(line logfoodcpi year if syria==1), legend(order(1 "Egypt" 2 "Iraq" 3 "Yemen" 4 "Syria")) ///
+	title(Food Production Index) subtitle(Select Countries) ytitle(Index) xtitle(Year) ///
+	xlabel(2000(2)2014) 
+	
+restore
+
+reg sfi logfoodcpi food_pro_index i.year egypt syria yemen iraq, r 
+
+gen ME_civilwar = 0 
+replace ME_civilwar=1 if egypt==1 | syria==1 | yemen==1 | iraq==1 
+
+areg sfi c.logfoodcpi##i.ME_civilwar food_pro_index i.year, absorb(countrycoded) cluster(countryname) 
 *******Regression movement/build up
 
 *1 --> between effect 
@@ -211,3 +262,78 @@ esttab r6
 *outreg2 r3 using foodSFIreg, append excel 
 
 *do this again but compare iraq and syria 
+
+
+
+
+********************************************************************************
+************************************************************************************************
+********************************************************************************
+************************************************************************************************
+********************************************************************************
+
+*same sort of analysis but now look at 4 countries of interest 
+
+*between effect CPI --> controlling for year fixed effects
+reg sfi c.logfoodcpi##i.syria c.logfoodcpi##i.iraq c.logfoodcpi##i.egypt ///
+  i.year c.logfoodcpi##i.yemen, r
+est sto r10
+esttab r10 
+*outreg2 r10 using regressresults2, append excel 
+
+
+*between effect yields 
+reg sfi c.logcereal##i.syria c.logcereal##i.iraq c.logcereal##i.egypt ///
+  i.year c.logcereal##i.yemen, r
+est sto r11
+esttab r11
+*outreg2 r10 using regressresults2, append excel 
+
+*fixed effects CPI 
+areg sfi c.logfoodcpi##i.syria c.logfoodcpi##i.iraq c.logfoodcpi##i.yemen ///
+	c.logfoodcpi##i.egypt i.year, absorb(countrycoded) cluster(countrycoded)
+
+*Fixed effects cereal 
+areg sfi c.logcereal##i.syria c.logcereal##i.iraq c.logcereal##i.yemen ///
+	c.logcereal##i.egypt i.year, absorb(countrycoded) cluster(countrycoded)
+
+*This graph tells a crazy story 
+*Syria 
+preserve
+collapse sfi logcereal, by(year syria) 
+twoway (line sfi year if syria==1)(line logcereal year if syria==1, yaxis(2)), ///
+	title(Cereal Yields vs. State Fragility) subtitle("Syria 2000-2014") ///
+	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
+	xtitle(Year) xlabel(2000(2)2014)
+restore
+
+*Yemen
+preserve
+collapse sfi logcereal, by(year yemen) 
+twoway (line sfi year if yemen==1)(line logcereal year if yemen==1, yaxis(2)), ///
+	title(Cereal Yields vs. State Fragility) subtitle("Yemen 2000-2014") ///
+	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
+	xtitle(Year) xlabel(2000(2)2014)
+restore
+
+*Egypt 
+preserve
+collapse sfi logcereal, by(year egypt) 
+twoway (line sfi year if egypt==1)(line logcereal year if egypt==1, yaxis(2)), ///
+	title(Cereal Yields vs. State Fragility) subtitle("Egypt 2000-2014") ///
+	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
+	xtitle(Year) xlabel(2000(2)2014)
+
+*Iraq 
+preserve
+collapse sfi logcereal, by(year iraq) 
+twoway (line sfi year if iraq==1)(line logcereal year if iraq==1, yaxis(2)), ///
+	title(Cereal Yields vs. State Fragility) subtitle("Iraq 2000-2014") ///
+	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
+	xtitle(Year) xlabel(2000(2)2014)
+
+*All World 
+preserve
+collapse sfi logcereal [aweight=ag_yld_crel_kg], by(year) 
+twoway (line sfi year)(line logcereal year, yaxis(2)) 
+restore
