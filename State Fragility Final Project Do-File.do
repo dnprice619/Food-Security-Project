@@ -64,7 +64,7 @@ restore
 *very little variation 
 *FOOD PRICE BY REGION
 preserve
-collapse foodcpi, by(regioncoded) 
+collapse logfoodcpi, by(regioncoded) 
 graph bar logfoodcpi, over(regioncoded, sort(1)) asyvars
 restore
 
@@ -189,7 +189,7 @@ gen middle_east = 0
 replace middle_east =1 if regioncoded==4 
 
 gen S_Africa = 0 
-replace S_Africa = 1 if reigoncoded==7
+replace S_Africa = 1 if regioncoded==7
 
 reg sfi c.logfoodcpi##i.S_Africa c.logfoodcpi##i.middle_east i.year, r
 
@@ -323,6 +323,7 @@ twoway (line sfi year if egypt==1)(line logcereal year if egypt==1, yaxis(2)), /
 	title(Cereal Yields vs. State Fragility) subtitle("Egypt 2000-2014") ///
 	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
 	xtitle(Year) xlabel(2000(2)2014)
+restore 
 
 *Iraq 
 preserve
@@ -331,9 +332,252 @@ twoway (line sfi year if iraq==1)(line logcereal year if iraq==1, yaxis(2)), ///
 	title(Cereal Yields vs. State Fragility) subtitle("Iraq 2000-2014") ///
 	legend(order(1 "SFI" 2 "Cereal")) ytitle(Index) ytitle(Log Yields, axis(2)) ///
 	xtitle(Year) xlabel(2000(2)2014)
+restore 
 
 *All World 
 preserve
 collapse sfi logcereal [aweight=ag_yld_crel_kg], by(year) 
 twoway (line sfi year)(line logcereal year, yaxis(2)) 
 restore
+
+
+*change and levels of CPI 
+*world
+preserve
+collapse logfoodcpi, by(year) 
+tsset year
+twoway (line D.logfoodcpi year)(line logfoodcpi year, yaxis(2)) 
+restore
+
+*syria
+*world
+preserve
+collapse logfoodcpi if syria==1, by(year) 
+tsset year
+twoway (line D.logfoodcpi year)(line logfoodcpi year, yaxis(2)), title(Syira Food Price Index) ///
+	subtitle("2000-2015") xtitle(Year) xlabel(2000(2)2015) legend(order(1 "First Difference Log Food Price" 2 "Log Food Price")) ///
+	ytitle(Difference Log Food CPI) ytitle(Log Food CPI, axis(2))
+restore
+
+*iraq 
+*
+preserve
+collapse logfoodcpi if iraq==1, by(year) 
+tsset year
+twoway (line D.logfoodcpi year)(line logfoodcpi year, yaxis(2)) 
+restore
+
+*yemen
+preserve
+collapse logfoodcpi if yemen==1, by(year) 
+tsset year
+twoway (line D.logfoodcpi year)(line logfoodcpi year, yaxis(2)) 
+restore
+
+*egypt 
+*world
+preserve
+collapse logfoodcpi if egypt==1, by(year) 
+tsset year
+twoway (line D.logfoodcpi year)(line logfoodcpi year, yaxis(2)) 
+restore
+
+
+
+
+
+***************************************************************************
+***************************************************************************
+*6/11/17 econometric analysis for paper 
+
+*outcome variable SFI 
+
+*treatment variable one 
+*CPI threshold binary 
+gen foodcpi_dummy =  0 
+replace foodcpi_dummy = 1 if logfoodcpi>5 
+
+*second treatment 
+*log cereal 
+
+cmogram sfi foodcpi_dummy, scatter lowess
+
+
+*tau graph??? 
+egen min_foodcpi = min(year) if foodcpi_dummy==1, by(countryname)
+
+
+gen first_foodcpi=0 
+
+replace first_foodcpi=1 if year==min_foodcpi
+
+gen tautau = first_foodcpi*year 
+
+egen tautot= total(tautau), by(countryname) 
+
+gen tau = year - min_foodcpi  
+
+replace tau = . if tau>3| tau<-3
+
+rename tau lagvariable
+
+lowess sfi lagvariable, nograph gen(wowlowess) 
+
+preserve
+collapse sfi, by(lagvariable) 
+lowess sfi lagvariable 
+restore
+
+
+*regressions 
+reg sfi foodcpi_dummy i.year, r
+reg sfi logfoodcpi i.year, r
+
+reg sfi i.foodcpi_dummy##i.egypt i.foodcpi_dummy##i.syria i.foodcpi_dummy##i.iraq ///
+	i.foodcpi_dummy##i.yemen i.year, r
+
+reg sfi i.foodcpi_dummy##i.egypt i.foodcpi_dummy##i.syria i.foodcpi_dummy##i.iraq ///
+	i.foodcpi_dummy##i.yemen i.year i.countrycoded, r
+
+cmogram sfi logfoodcpi, scatter lowess 
+
+preserve
+collapse sfi logfoodcpi, by(countryname) 
+twoway scatter sfi logfoodcpi, mlabel(countryname) 
+restore
+
+preserve
+collapse sfi logcereal, by(countryname) 
+twoway scatter sfi logcereal, mlabel(countryname) 
+restore
+
+*MERGE IN POPULATION DATA SO I CAN NORAMLIZE THE CEREAL VARIABLE 
+preserve
+clear 
+wbopendata, long year(2000:2015) indicator(SP.POP.TOTL) 
+kountry countryname, from(other) marker 
+tab MARKER 
+drop if MARKER==0 
+drop countryname 
+rename NAMES_STD countryname 
+rename sp_pop_totl popcount 
+keep popcount year countryname 
+save populationcount.dta, replace 
+restore 
+
+drop _merge 
+
+merge 1:1 year countryname using populationcount.dta 
+keep if _merge==3 
+
+*normalize cereal 
+*cereal per kg per capita 
+gen cereal_pro_cap = ag_yld_crel_kg/popcount 
+
+kdensity cereal_pro_cap
+
+gen logcerealcap = ln(cereal_pro_cap) 
+
+kdensity logcerealcap
+
+reg sfi logcerealcap i.year, r
+
+gen cerealpro2 = ag_prd_crel_mt/popcount 
+
+gen logcerealpro2 = ln(cerealpro2) 
+
+reg sfi logcerealpro2 i.year, r
+
+preserve
+collapse logcerealpro2 logcerealcap, by(countryname) 
+twoway scatter logcerealpro2 logcerealcap, mlabel(countryname) 
+restore
+
+preserve 
+collapse logcerealcap sfi, by(countryname) 
+twoway (scatter logcerealcap sfi, mlabel(countryname))(lfit logcerealcap sfi) 
+restore
+
+*USE LOG CEREAL CAP ]not logcereal 2 
+
+preserve
+collapse sfi logcerealcap logfoodcpi, by(year) 
+tsset year
+twoway (line logcerealcap year)(line logfoodcpi year, yaxis(2)), title(Food CPI & Cereal Yields Trends) ///
+	subtitle("2000-2015") ytitle(Log Yields) ytitle(Log CPI, axis(2)) xtitle(Year) xlabel(2000(2)2015) ///
+	legend(order(1 "Cereal Yields Kg per Hectare per Capita" 2 "Food CPI")) ///
+	note(CPI captures changes in nominal prices) 
+restore
+
+preserve 
+collapse logcerealcap logfoodcpi, by(year egypt syria) 
+twoway (line logcerealcap year if egypt==1)(line logcerealcap year if syria==1) ///
+	(line logfoodcpi year if egypt==1, yaxis(2))(line logfoodcpi year if syria==1, yaxis(2)), ///
+	legend(order(1 "Egypt Cereal Yields" 2 "Syria Cereal Yields" 3 "Egypt Food CPI" 4 "Syria Food CPI")) ///
+	ytitle(Log Yields) ytitle(Log CPI, axis(2)) xtitle(Year) xlabel(2000(2)2015) ///
+	title(Food CPI & Cereal Yields Trends) subtitle(Egypt vs. Syria) ///
+	note(Cereal Yields in Kg per Hecatre per Person)
+restore
+
+preserve 
+collapse logcerealcap logfoodcpi, by(year iraq yemen) 
+twoway (line logcerealcap year if iraq==1)(line logcerealcap year if yemen==1) ///
+	(line logfoodcpi year if iraq==1, yaxis(2))(line logfoodcpi year if yemen==1, yaxis(2)), ///
+	legend(order(1 "Iraq Cereal Yields" 2 "Yemen Cereal Yields" 3 "Iraq Food CPI" 4 "Yemen Food CPI")) ///
+	ytitle(Log Yields) ytitle(Log CPI, axis(2)) xtitle(Year) xlabel(2000(2)2015) ///
+	title(Food CPI & Cereal Yields Trends) subtitle(Iraq vs. Yemen) ///
+	note(Cereal Yields in Kg per Hecatre per Person)
+restore
+
+*SFI trends 
+preserve
+collapse sfi, by(year iraq egypt syria yemen) 
+twoway (line sfi year if egypt==1)(line sfi year if syria==1) ///
+	(line sfi year if iraq==1)(line sfi year if yemen==1), title(State Fragility Index Trends) ///
+	subtitle(World Compared to Select Countries) ytitle(Index Score) xtitle(Year) ///
+	xlabel(2000(2)2015) legend(order(1 "Egypt" 2 "Syria" 3 "Iraq" 4 "Yemen"))
+restore
+
+*results 
+reg sfi logfoodcpi egypt syria yemen iraq c.logfoodcpi##i.egypt c.logfoodcpi##i.syria ///
+	 c.logfoodcpi##i.yemen  c.logfoodcpi##i.iraq, cluster(countryname) r
+est sto r10
+esttab r10
+*outreg2 r10 using regfinal, append excel 
+
+reg sfi logfoodcpi egypt syria yemen iraq c.logfoodcpi##i.egypt c.logfoodcpi##i.syria ///
+	 c.logfoodcpi##i.yemen  c.logfoodcpi##i.iraq i.year, cluster(countryname) r
+est sto r11
+esttab r11
+*outreg2 r11 using regfinal, append excel 
+
+reg sfi logfoodcpi egypt syria yemen iraq c.logfoodcpi##i.egypt c.logfoodcpi##i.syria ///
+	 c.logfoodcpi##i.yemen  c.logfoodcpi##i.iraq i.year i.countrycoded, cluster(countryname) r
+est sto r12
+esttab r12
+*outreg2 r12 using regfinal, append excel 
+
+reg sfi logcerealcap egypt syria yemen iraq c.logcerealcap##i.egypt c.logcerealcap##i.syria ///
+	 c.logcerealcap##i.yemen  c.logcerealcap##i.iraq, cluster(countryname) r
+est sto r13
+esttab r13
+*outreg2 r13 using regfinal2, append excel 
+
+reg sfi logcerealcap egypt syria yemen iraq c.logcerealcap##i.egypt c.logcerealcap##i.syria ///
+	 c.logcerealcap##i.yemen  c.logcerealcap##i.iraq i.year, cluster(countryname) r
+est sto r14
+esttab r14
+*outreg2 r14 using regfinal2, append excel 
+
+reg sfi logcerealcap egypt syria yemen iraq c.logcerealcap##i.egypt c.logcerealcap##i.syria ///
+	 c.logcerealcap##i.yemen  c.logcerealcap##i.iraq i.year i.countrycoded, cluster(countryname) r
+est sto r15
+esttab r15
+*outreg2 r15 using regfinal2, append excel 
+
+
+
+
+
+
+
